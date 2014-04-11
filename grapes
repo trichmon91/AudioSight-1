@@ -1,0 +1,41 @@
+global proc float rmsBand(string $audioNodeName, int $start, int $end) {
+    int $i=0;
+    string $band;
+    float $rms=0;
+    float $temp;
+    for($i=$start; $i<$end; $i++){
+        $band = $audioNodeName+".fftOut["+$i+"]";
+        $temp = `getAttr $band`;
+        $temp = $temp*$temp;
+        $rms=$rms+$temp;
+    }
+    $rms=sqrt($rms);
+    return $rms;
+}
+global proc grapesScene(string $filename, int $bass, int $mid, int $treble) {
+	string $audioFile = `sound -file $filename -offset 0`;
+	
+	string $audioNodeName = `createNode audioNode`;
+	connectAttr time1.outTime ($audioNodeName+".inTime");
+	connectAttr ($audioFile+".filename") ($audioNodeName+".filePath");
+	connectAttr ($audioFile+".offset") ($audioNodeName+".offset"); 
+	
+	int $lowest = 0;
+    $mid = $mid + $bass;
+	$treble = $treble + $mid;
+	
+	polySphere;
+	polySphere;
+	polySphere;
+	
+	setAttr pSphere1.translateX 5;
+	setAttr pSphere3.translateX -5;
+	
+	expression -string ("polySphere1.radius = rmsBand(\""+$audioNodeName+"\","+$lowest+","+$bass+")");
+	expression -string ("polySphere2.radius = rmsBand(\""+$audioNodeName+"\","+$bass+","+$mid+")");
+	expression -string ("polySphere3.radius = rmsBand(\""+$audioNodeName+"\","+$mid+","+$treble+")");
+	
+	connectAttr -f expression1.output[0] lambert1.colorR;
+	connectAttr -f expression2.output[0] lambert1.colorG;
+	connectAttr -f expression3.output[0] lambert1.colorB;
+}
