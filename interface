@@ -1,38 +1,54 @@
 window -title "Specify Your Visualization";
 columnLayout;
-    text -label "Please choose your audio file.";
-    rowLayout -numberOfColumns 2;
-        button -label "Browse..." -command "browser" "browse_button";
-        textField "filename_field";
-        setParent ..;
-    text -label "How would you like to partition the frequency spectrum? Only relative values matter.";
-    floatSliderGrp -label "Bass" -field true -minValue 0 -maxValue 100 -value 100 "bass_slider";
-    floatSliderGrp -label "Mid-Range" -field true -minValue 0 -maxValue 100 -value 100 "midrange_slider";
-    floatSliderGrp -label "Treble" -field true -minValue 0 -maxValue 100 -value 100 "treble_slider";
-    
-    button -label "Create Scene" -command "gatherer()";
-setParent ..;
+	text -label "Please choose your audio file.";
+	rowLayout -numberOfColumns 2;
+        	button -label "Browse..." -command "browser" "browse_button";
+		textField "filename_field";
+		setParent ..;
+	text -label "How would you like to partition the frequency spectrum? Only relative values matter.";
+	floatSliderGrp -label "Bass" -field true -minValue 0 -maxValue 100 -value 100 "bass_slider";
+	floatSliderGrp -label "Mid-Range" -field true -minValue 0 -maxValue 100 -value 100 "midrange_slider";
+	floatSliderGrp -label "Treble" -field true -minValue 0 -maxValue 100 -value 100 "treble_slider";
+	text -label "Please pick the left and right endpoint colors of the gradient.";
+	rowLayout -numberOfColumns 4;
+		text -label "Left End";
+		canvas -rgbValue 1 1 1 -pressCommand ("chooser("+0+")") "left_color";
+		text -label "Right End";
+		canvas -rgbValue 1 1 1 -pressCommand ("chooser("+1+")") "right_color";
+		setParent ..;
+	button -label "Create Scene" -command "gatherer()";
+	setParent ..;
 showWindow;
 
 proc browser() {
-    string $multipleFilters = "WAV Audio (*.wav);;All Files (*.*)";
-    string $result[] = `fileDialog2 -fileFilter $multipleFilters -selectFileFilter "WAV Audio" -dialogStyle 2 -fileMode 1`;
-    textField -edit -text $result[0] "filename_field";
+	string $multipleFilters = "WAV Audio (*.wav);;All Files (*.*)";
+	string $result[] = `fileDialog2 -fileFilter $multipleFilters -selectFileFilter "WAV Audio" -dialogStyle 2 -fileMode 1`;
+	textField -edit -text $result[0] "filename_field";
+}
+proc chooser(int $leftright) {
+	colorEditor;
+	if (`colorEditor -query -result`) {
+		float $values[] = `colorEditor -query -rgbValue`;
+		if ($leftright==0) canvas -edit -rgbValue $values[0] $values[1] $values[2] "left_color";
+		else canvas -edit -rgbValue $values[0] $values[1] $values[2] "right_color";
+	}
 }
 proc gatherer() {
-    string $filename = `textField -query -text "filename_field"`;
-    float $bassraw = `floatSliderGrp -query -value "bass_slider"`;
-    float $midraw = `floatSliderGrp -query -value "midrange_slider"`;
-    float $trebleraw = `floatSliderGrp -query -value "treble_slider"`;
-    float $total = $bassraw + $midraw + $trebleraw;
-    $bassraw = $bassraw * (32 / $total);
-    $midraw = $midraw * (32 / $total);
-    $trebleraw = $trebleraw * (32 / $total);
-    int $bass = floor($bassraw + 0.5);
-    int $mid = floor($midraw + 0.5);
-    int $treble = floor($trebleraw + 0.5);
-    $bass = $bass - ($bass + $mid + $treble - 32);
-    
-    //QUIT THE INTERFACE SOMEHOW
-    grapesScene($filename, $bass, $mid, $treble);
+	string $filename = `textField -query -text "filename_field"`;
+	float $bassraw = `floatSliderGrp -query -value "bass_slider"`;
+	float $midraw = `floatSliderGrp -query -value "midrange_slider"`;
+	float $trebleraw = `floatSliderGrp -query -value "treble_slider"`;
+	float $total = $bassraw + $midraw + $trebleraw;
+	$bassraw = $bassraw * (32 / $total);
+	$midraw = $midraw * (32 / $total);
+	$trebleraw = $trebleraw * (32 / $total);
+	int $bass = floor($bassraw + 0.5);
+	int $mid = floor($midraw + 0.5);
+	int $treble = floor($trebleraw + 0.5);
+	$bass = $bass - ($bass + $mid + $treble - 32);
+	float $left[] = `canvas -query -rgbValue "left_color"`;
+	float $right[] = `canvas -query -rgbValue "right_color"`;
+	
+	//QUIT THE INTERFACE SOMEHOW
+	grapesScene($filename, $bass, $mid, $treble, $left, $right);
 }
