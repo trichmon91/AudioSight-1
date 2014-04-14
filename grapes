@@ -1,4 +1,4 @@
-proc float rmsBand(string $audioNodeName, int $start, int $end) {
+global proc float rmsBand(string $audioNodeName, int $start, int $end) {
     int $i=0;
     string $band;
     float $rms=0;
@@ -12,7 +12,7 @@ proc float rmsBand(string $audioNodeName, int $start, int $end) {
     $rms=sqrt($rms);
     return $rms;
 }
-global proc grapesScene(string $filename, int $bass, int $mid, int $treble, float $left[], float $right[]) {
+global proc grapesScene(string $filename, int $bass, int $mid, int $treble) {
 	string $audioFile = `sound -file $filename -offset 0`;
 	
 	string $audioNodeName = `createNode audioNode`;
@@ -21,7 +21,7 @@ global proc grapesScene(string $filename, int $bass, int $mid, int $treble, floa
 	connectAttr ($audioFile+".offset") ($audioNodeName+".offset"); 
 	
 	int $lowest = 0;
-	$mid = $mid + $bass;
+    $mid = $mid + $bass;
 	$treble = $treble + $mid;
 	
 	polySphere;
@@ -35,20 +35,7 @@ global proc grapesScene(string $filename, int $bass, int $mid, int $treble, floa
 	expression -string ("polySphere2.radius = rmsBand(\""+$audioNodeName+"\","+$bass+","+$mid+")");
 	expression -string ("polySphere3.radius = rmsBand(\""+$audioNodeName+"\","+$mid+","+$treble+")");
 	
-	expression -string ("lambert1.colorR = expression1.output[0]*"+$left[0]);
-	expression -string ("lambert1.colorB = expression1.output[0]*"+$left[1]);
-	expression -string ("lambert1.colorG = expression1.output[0]*"+$left[2]);
-	
-	createNode lambert;
-	defaultNavigation -source lambert2 -destination |pSphere2|pSphereShape2.instObjGroups[0] -connectToExisting;
-	float $middle[] = {($left[0]+$right[0])/2, ($left[1]+$right[1])/2, ($left[2]+$right[2])/2};
-	expression -string ("lambert2.colorR = expression2.output[0]*"+$middle[0]);
-	expression -string ("lambert2.colorB = expression2.output[0]*"+$middle[1]);
-	expression -string ("lambert2.colorG = expression2.output[0]*"+$middle[2]);
-	
-	createNode lambert;
-	defaultNavigation -source lambert3 -destination |pSphere1|pSphereShape1.instObjGroups[0] -connectToExisting;
-	expression -string ("lambert3.colorR = expression3.output[0]*"+$right[0]);
-	expression -string ("lambert3.colorB = expression3.output[0]*"+$right[1]);
-	expression -string ("lambert3.colorG = expression3.output[0]*"+$right[2]);
-};
+	connectAttr -f expression1.output[0] lambert1.colorR;
+	connectAttr -f expression2.output[0] lambert1.colorG;
+	connectAttr -f expression3.output[0] lambert1.colorB;
+}
