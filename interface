@@ -1,4 +1,5 @@
-window -title "Specify Your Visualization";
+window -title "Specify Your Visualization"
+"main";
 columnLayout;
     text -label "Please choose your audio file.";
     rowLayout -numberOfColumns 2;
@@ -72,4 +73,6 @@ proc gatherer() {
     
     //QUIT THE INTERFACE SOMEHOW
     grapesScene($filename, $bass, $mid, $treble);
-}
+    //---------add a line to quite the interface-----------------
+    deleteUI "main";
+};

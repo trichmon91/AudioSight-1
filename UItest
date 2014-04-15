@@ -1,0 +1,32 @@
+//UItest
+//global proc UItest(string $path, int $bass, int $mid, int $treble, int $color, int $size)
+global proc UItest(string $path, int $bass, int $mid, int $treble)
+{
+    int $test=1;
+    if(!`filetest -r $path`)
+    {
+        print "Failed filepath";
+        $test=0;
+    }
+    int $band=$bass+$mid+$treble;
+    if($band!=32)
+    {
+        print "Failed frequency partition";
+        $test=0;
+    }
+    /*
+    if($color<1 ||$color>3)
+    {
+        print "Failed color selection";
+        $test=0;
+    }
+     if($size<1 ||$size>3)
+    {
+        print "Failed size selection";
+        $test=0;
+    }*/
+    if($test==1)
+    {
+        print "All tests passed";
+    }
+}
