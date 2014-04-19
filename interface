@@ -1,55 +1,71 @@
-window -title "Specify Your Visualization" "main";
-frameLayout -collapsable false -label "Settings";
-	text -label "Please choose your audio file.";
-	rowLayout -numberOfColumns 2;
-	button -label "Browse..." -command "browser" "browse_button";
-	textField "filename_field";
-	setParent ..;
-	text -label "How would you like to partition the frequency spectrum? Only relative values matter.";
-	floatSliderGrp -label "Bass" -field true -minValue 0 -maxValue 100 -value 100 "bass_slider";
-	floatSliderGrp -label "Mid-Range" -field true -minValue 0 -maxValue 100 -value 100 "midrange_slider";
-	floatSliderGrp -label "Treble" -field true -minValue 0 -maxValue 100 -value 100 "treble_slider";
-	rowLayout -numberOfColumns 4;
-		text -label "Left End";
-		canvas -rgbValue 1 1 1 -pressCommand ("chooser("+0+")") "left_color";
-		text -label "Right End";
-		canvas -rgbValue 1 1 1 -pressCommand ("chooser("+1+")") "right_color";
-		setParent ..;
-	button -label "Create Scene" -command "gatherer()";
-
-	///////////////////////////////////////////////////////////////////////////////////////////
-	//Code for rendering animation: all animation-related UI controls are self-conatained in the framelayout
-	///////////////////////////////////////////////////////////////////////////////////////////
-	
-	frameLayout -collapsable false -label "Rendering";
-		//By default will render one second (24 frames) of animation
-		floatSliderGrp -label "Start Frame" -field true -minValue 0 -maxValue 1000 -value 0 "start_frame";
-		floatSliderGrp -label "End Frame" -field true -minValue 0 -maxValue 1000 -value 24 "end_frame";
-		button -label "Render Animation" -command "render()";
-		setParent ..;
-	setParent ..;
+window -width 390 -title "Specify Your Visualization" "window";
+scrollLayout;
+	columnLayout -adjustableColumn true;
+		frameLayout -collapsable true -collapse false -label "Visualization";
+			columnLayout;
+				frameLayout -collapsable false -width 392 -label "Basics";
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "Please select your audio file.";
+						setParent ..;
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center"; 
+						button -label "Browse..." -command "browser" "browse_button";
+						textField "filename_field";
+						setParent ..;
+					rowLayout -numberOfColumns 2 -columnWidth2 122 400 -columnAlign2 "right" "center";
+						text "";
+						checkBox -label "Automatically import sound file into Maya timeline" -value false "import_checkbox";
+						setParent ..;
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "Which kind of geometric object should populate your visualization?";
+						setParent ..;
+					radioButtonGrp -label "Shape" -numberOfRadioButtons 2 -labelArray2 "Spheres" "Cubes" -select 1 "shape_radio";
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "How many frequency bands/geometric objects would you like?";
+						setParent ..;
+					intSliderGrp -label "Quantity" -field true -minValue 1 -maxValue 32 -value 3 "bands_slider";
+					setParent ..;
+				frameLayout -collapsable false -width 392 -label "Color";
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "Objects' color will be filled using a gradient from left to right. Choose color values for each end.";
+						setParent ..;
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text -label "Left End";
+						canvas -rgbValue 1 1 1 -width 200 -pressCommand ("chooser("+0+")") "left_color";
+						setParent ..;
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text -label "Right End";
+						canvas -rgbValue 1 1 1 -width 200 -pressCommand ("chooser("+1+")") "right_color";
+						setParent ..;
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "Choose your color interpolation method. HSV interpolation is better for bright colors directly across the color spectrum. RGB interpolation is better for combinations which include a very light or a very dark color.";
+						setParent ..;
+					radioButtonGrp -label "Interpolation Method" -numberOfRadioButtons 2 -labelArray2 "HSV" "RGB" -select 1 "interpolation_radio";
+					rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "You may also choose to link each ball's color brightness to its band value.";
+						setParent ..;
+					radioButtonGrp -label "Driver" -numberOfRadioButtons 2 -labelArray2 "Color Fixed" "Sound Drives Color" -select 1 "color_radio";
+					button -label "Create Scene" -command "gatherer()";
+					setParent ..;
+				setParent ..;
+			setParent ..;
+		frameLayout -collapsable true -collapse false -label "Rendering";
+			columnLayout;
+				intSliderGrp -label "Start Frame" -field true -minValue 0 -maxValue 10000 -value 0 "start_frame";
+				intSliderGrp -label "End Frame" -field true -minValue 0 -maxValue 10000 -value 24 "end_frame";;
+				rowLayout -numberOfColumns 2 -columnWidth2 140 400 -columnAlign2 "right" "center";
+						text "";
+						text -align "left" -width 200 -wordWrap true -label "The file will render into 'maya/projects/default/images' using the current camera's perspective.";
+						setParent ..;
+				button -label "Render Animation" -command "renderer()";
+				setParent ..;
+			setParent ..;
 showWindow;
-
-////////////////////////////////////////////////////////////////////////////////////////////
-// Callback function for "Render Animation" button:
-// Uses the values specified by the sliders "Start Frame" and "End Frame" to define a 
-// region in time. The viewport will be rendered on each frame starting from the start frame
-// until the end frame. No mechanism exists to store the rendered images in a consistent place.
-////////////////////////////////////////////////////////////////////////////////////////////
-
-proc render() {
-	gatherer();
-	float $start_frame = `floatSliderGrp -query -value "start_frame"`;
-	float $end_frame = `floatSliderGrp -query -value "end_frame"`;
-	int $i;
-	for ($i = 0; $i < $end_frame; $i++) { //Should all of these destinations be the same??? What is a .iff file?
-		//Will contain the filepath of the rendered image
-		//Update to the next frame, and recompute the viewport based on frame advance
-		currentTime -edit $i -update yes;
-		string $image_path = `render -batch -replace no`;
-		print ("Rendered frame to " + $image_path + "\n");	
-	}
-}
 
 proc browser() {
 	string $multipleFilters = "WAV Audio (*.wav);;All Files (*.*)";
@@ -66,21 +82,23 @@ proc chooser(int $leftright) {
 }
 proc gatherer() {
 	string $filename = `textField -query -text "filename_field"`;
-	float $bassraw = `floatSliderGrp -query -value "bass_slider"`;
-	float $midraw = `floatSliderGrp -query -value "midrange_slider"`;
-	float $trebleraw = `floatSliderGrp -query -value "treble_slider"`;
-	float $total = $bassraw + $midraw + $trebleraw;
-	$bassraw = $bassraw * (32 / $total);
-	$midraw = $midraw * (32 / $total);
-	$trebleraw = $trebleraw * (32 / $total);
-	int $bass = floor($bassraw + 0.5);
-	int $mid = floor($midraw + 0.5);
-	int $treble = floor($trebleraw + 0.5);
-	$bass = $bass - ($bass + $mid + $treble - 32);
-	
+	int $bands = `intSliderGrp -query -value "bands_slider"`;
+	int $shape = `radioButtonGrp -query -select "shape_radio"`;
 	float $left[] = `canvas -query -rgbValue "left_color"`;
 	float $right[] = `canvas -query -rgbValue "right_color"`;
+	int $interpolation = `radioButtonGrp -query -select "interpolation_radio"`;
+	int $color = `radioButtonGrp -query -select "color_radio"`;
 	
-	grapesScene($filename, $bass, $mid, $treble, $left, $right);
-	deleteUI "main";
-};
+	int $import = `checkBox -query -value "import_checkbox"`;
+	if ($import) doSoundImportArgList ("1", {$filename,"0.0"});
+	grapes($filename, $bands, $shape, $left, $right, $interpolation, $color);
+	//deleteUI "window";
+}
+proc renderer() {
+	setAttr "defaultRenderGlobals.imageFormat" 23; //AVI Format
+	int $start_frame = `intSliderGrp -query -value "start_frame"`;
+	int $end_frame = `intSliderGrp -query -value "end_frame"`;
+	setAttr ("defaultRenderGlobals.startFrame") $start_frame;
+	setAttr ("defaultRenderGlobals.endFrame") $end_frame;
+	batchRender -filename `file -query -sceneName`;
+}
