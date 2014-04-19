@@ -1,54 +1,126 @@
-proc float rmsBand(string $audioNodeName, int $start, int $end) {
-	int $i=0;
-	string $band;
-	float $rms=0;
-	float $temp;
-	for($i=$start; $i<$end; $i++) {
-		$band = $audioNodeName+".fftOut["+$i+"]";
-		$temp = `getAttr $band`;
-		$temp = $temp*$temp;
-		$rms=$rms+$temp;
-	}
-	$rms=sqrt($rms);
-	return $rms;
-}
-global proc grapesScene(string $filename, int $bass, int $mid, int $treble, float $left[], float $right[]) {
+global proc grapes(string $filename, int $bands, int $shape, float $left[], float $right[], int $interpolation, int $color) {
 	string $audioFile = `sound -file $filename -offset 0`;
 	
 	string $audioNodeName = `createNode audioNode`;
 	connectAttr time1.outTime ($audioNodeName+".inTime");
 	connectAttr ($audioFile+".filename") ($audioNodeName+".filePath");
-	connectAttr ($audioFile+".offset") ($audioNodeName+".offset"); 
+	connectAttr ($audioFile+".offset") ($audioNodeName+".offset");
+	setAttr ($audioNodeName+".bandsNumber") $bands;
+	if ($shape==2) setAttr ($audioNodeName+".ampScale") 2.0;
 	
-	int $lowest = 0;
-	$mid = $mid + $bass;
-	$treble = $treble + $mid;
-	
-	polySphere;
-	polySphere;
-	polySphere;
-	
-	setAttr pSphere1.translateX 5;
-	setAttr pSphere3.translateX -5;
-	
-	expression -string ("polySphere1.radius = rmsBand(\""+$audioNodeName+"\","+$lowest+","+$bass+")");
-	expression -string ("polySphere2.radius = rmsBand(\""+$audioNodeName+"\","+$bass+","+$mid+")");
-	expression -string ("polySphere3.radius = rmsBand(\""+$audioNodeName+"\","+$mid+","+$treble+")");
-	
-	expression -string ("lambert1.colorR = expression1.output[0]*"+$left[0]);
-	expression -string ("lambert1.colorB = expression1.output[0]*"+$left[1]);
-	expression -string ("lambert1.colorG = expression1.output[0]*"+$left[2]);
-	
-	createNode lambert;
-	defaultNavigation -source lambert2 -destination |pSphere2|pSphereShape2.instObjGroups[0] -connectToExisting;
-	float $middle[] = {($left[0]+$right[0])/2, ($left[1]+$right[1])/2, ($left[2]+$right[2])/2};
-	expression -string ("lambert2.colorR = expression2.output[0]*"+$middle[0]);
-	expression -string ("lambert2.colorB = expression2.output[0]*"+$middle[1]);
-	expression -string ("lambert2.colorG = expression2.output[0]*"+$middle[2]);
-	
-	createNode lambert;
-	defaultNavigation -source lambert3 -destination |pSphere1|pSphereShape1.instObjGroups[0] -connectToExisting;
-	expression -string ("lambert3.colorR = expression3.output[0]*"+$right[0]);
-	expression -string ("lambert3.colorB = expression3.output[0]*"+$right[1]);
-	expression -string ("lambert3.colorG = expression3.output[0]*"+$right[2]);
-};
+	string $collection[];
+	int $i;
+	for ($i = 0; $i < $bands; $i++) {
+		string $temp[];
+		if ($shape==1) {
+			$temp = `polySphere`;
+			connectAttr ($audioNodeName+".fftOut["+$i+"]") ($temp[1]+".radius");
+		}
+		else if ($shape==2) {
+			$temp = `polyCube`;
+			connectAttr ($audioNodeName+".fftOut["+$i+"]") ($temp[1]+".width");
+			connectAttr ($audioNodeName+".fftOut["+$i+"]") ($temp[1]+".height");
+			connectAttr ($audioNodeName+".fftOut["+$i+"]") ($temp[1]+".depth");
+		}
+		setAttr ($temp[0]+".translateX") (($i-$bands/2)*1);
+		if ($i>0) { //The first lambert 'lambert1' already exists. No need to create it again.
+			string $lambert = `createNode lambert`;
+			int $n = `size $temp[0]`;
+			string $base;
+			if ($shape==1) $base = "pSphere";
+			else if ($shape==2) $base = "pCube";
+			defaultNavigation -source ($lambert) -destination ("|"+$temp[0]+"|"+$base+"Shape"+($i+1)+".instObjGroups[0]") -connectToExisting;
+			//^^ This connects the newly created lambert to the appropriate shape.
+		}
+		float $if = $i;
+		float $bandsf = $bands;
+		float $interprgb[];
+		if ($interpolation==1) {
+			float $lefthsv[] = RGBtoHSV($left);
+			float $righthsv[] = RGBtoHSV($right);
+			$interphsv = interphsv($lefthsv, $righthsv, $if/$bandsf);
+			$interprgb = HSVtoRGB($interphsv);
+		}
+		else if ($interpolation==2) $interprgb = interprgb($left, $right, $if/$bandsf);
+		if ($color==1) {
+			setAttr ("lambert"+($i+1)+".colorR") ($interprgb[0]);
+			setAttr ("lambert"+($i+1)+".colorG") ($interprgb[1]);
+			setAttr ("lambert"+($i+1)+".colorB") ($interprgb[2]);
+		}
+		else if ($color==2) {
+			expression -string ("lambert"+($i+1)+".colorR = "+$audioNodeName+".fftOut["+$i+"]*"+$interprgb[0]);
+			expression -string ("lambert"+($i+1)+".colorG = "+$audioNodeName+".fftOut["+$i+"]*"+$interprgb[1]);
+			expression -string ("lambert"+($i+1)+".colorB = "+$audioNodeName+".fftOut["+$i+"]*"+$interprgb[2]);
+		}
+		$collection[$i] = stringArrayToString($temp, " ");
+	}
+}
+
+proc float[] RGBtoHSV(float $rgb[]) {
+	float $hsv[];
+	float $min = min(min($rgb[0], $rgb[1]), $rgb[2]);
+	float $max = max(max($rgb[0], $rgb[1]), $rgb[2]);
+	$hsv[2] = $max;								// v
+	float $delta = $max - $min;
+	if ($max != 0) $hsv[1] = $delta/$max;					// s
+	else {
+		// r = g = b = 0						// s = 0, v is undefined
+		$hsv[1] = 0;
+		$hsv[0] = -1;
+		return $hsv;
+	}
+	if ($delta == 0) $hsv[0] = 0;
+	else if ($rgb[0] == $max) $hsv[0] = ($rgb[1] - $rgb[2]) / $delta;	// between yellow & magenta
+	else if ($rgb[1] == $max) $hsv[0] = 2 + ($rgb[2] - $rgb[0]) / $delta;	// between cyan & yellow
+	else $hsv[0] = 4 + ($rgb[0] - $rgb[1]) / $delta;			// between magenta & cyan
+	$hsv[0] = $hsv[0]*60;							// degrees
+	if ($hsv[0] < 0) $hsv[0] = $hsv[0] + 360;
+	return $hsv;
+}
+proc float[] HSVtoRGB(float $hsv[]) {
+	float $rgb[];
+	int $i;
+	float $f, $p, $q, $t;
+	if ($hsv[1] == 0) {
+		// achromatic (grey)
+		$rgb[0] = $hsv[2];
+		$rgb[1] = $hsv[2];
+		$rgb[2] = $hsv[2];
+		return $rgb;
+	}
+	$hsv[0] = $hsv[0] / 60;			// sector 0 to 5
+	$i = floor($hsv[0]);
+	$f = $hsv[0] - $i;			// factorial part of h
+	$p = $hsv[2] * (1 - $hsv[1]);
+	$q = $hsv[2] * (1 - $hsv[1] * $f);
+	$t = $hsv[2] * (1 - $hsv[1] * (1 - $f));
+	switch($i) {
+		case 0: $rgb = {$hsv[2], $t, $p}; break;
+		case 1: $rgb = {$q, $hsv[2], $p}; break;
+		case 2: $rgb = {$p, $hsv[2], $t}; break;
+		case 3: $rgb = {$p, $q, $hsv[2]}; break;
+		case 4: $rgb = {$t, $p, $hsv[2]}; break;
+		default: $rgb = {$hsv[2], $p, $q}; break;
+	}
+	return $rgb;
+}
+proc float[] interprgb(float $left[], float $right[], float $ratio) {
+	float $interprgb[];
+	$interprgb[0] = $left[0] + ($right[0] - $left[0])*$ratio;
+	$interprgb[1] = $left[1] + ($right[1] - $left[1])*$ratio;
+	$interprgb[2] = $left[2] + ($right[2] - $left[2])*$ratio;
+	return $interprgb;
+}
+proc float[] interphsv(float $lefthsv[], float $righthsv[], float $ratio) {
+	float $interphsv[];
+	if (`abs ($lefthsv[0]-$righthsv[0])` <= 180) $interphsv[0] = $lefthsv[0]+($righthsv[0]-$lefthsv[0])*$ratio;
+	else {
+		if ($lefthsv[0] > $righthsv[0]) $lefthsv[0] = $lefthsv[0] - 360;
+		else $righthsv[0] = $righthsv[0] - 360;
+		$interphsv[0] = $lefthsv[0] + ($righthsv[0] - $lefthsv[0])*$ratio;
+		if ($interphsv[0] < 0) $interphsv[0] = $interphsv[0] + 360;
+	}
+	$interphsv[1] = $lefthsv[1]+($righthsv[1]-$lefthsv[1])*$ratio;
+	$interphsv[2] = $lefthsv[2]+($righthsv[2]-$lefthsv[2])*$ratio;
+	return $interphsv;
+}
