@@ -1,3 +1,5 @@
+//Written by Turner Richmond and Ben Dreyzen
+
 global proc grapes(string $filename, int $bands, int $shape, float $left[], float $right[], int $interpolation, int $color) {
 	string $audioFile = `sound -file $filename -offset 0`;
 	
