@@ -1,7 +1,21 @@
 //Written by Turner Richmond
 
+global proc float rmsBand(string $audioNodeName, int $start, int $end) {
+    int $i=0;
+    string $band;
+    float $rms=0;
+    float $temp;
+    for($i=$start; $i<$end; $i++){
+        $band = $audioNodeName+".fftOut["+$i+"]";
+        $temp = `getAttr $band`;
+        $temp = $temp*$temp;
+        $rms=$rms+$temp;
+    }
+    $rms=sqrt($rms);
+    return $rms;
+}
 
-global proc speakerScene(string $filename, int $bass, int $mid, int $treble, float $left[], float $right[]) {
+global proc speakerScene(string $filename, int $bass, int $mid, int $treble, float $left[], float $right[], int $interpolation, int $color) {
     string $audioFile = `sound -file $filename -offset 0`;
 
     string $audioNodeName = `createNode audioNode`;
@@ -12,23 +26,46 @@ global proc speakerScene(string $filename, int $bass, int $mid, int $treble, flo
     int $lowest = 0;
     $mid = $mid + $bass;
     $treble = $treble + $mid;
+    
+    CreateAmbientLight;
+    defaultAmbientLight(1, 0.45, 1,1,1, "0", 0,0,0, "1");
 
 //create 3 planes
     polyPlane -ch on -o on -w 10 -h 10 -sw 1 -sh 1 -cuv 2 ;
-    move -r 0 0 12 ;
+    move -r 0 2 12 ;
     setAttr "polyPlane1.subdivisionsWidth" 50;
     setAttr "polyPlane1.subdivisionsHeight" 50;
     polyPlane -ch on -o on -w 10 -h 10 -sw 1 -sh 1 -cuv 2 ;
-    move -r 0 0 0 ;
+    move -r 0 2 0 ;
     setAttr "polyPlane2.subdivisionsWidth" 50;
     setAttr "polyPlane2.subdivisionsHeight" 50;
     polyPlane -ch on -o on -w 10 -h 10 -sw 1 -sh 1 -cuv 2 ;
-    move -r 0 0 -12 ;
+    move -r 0 2 -12 ;
     setAttr "polyPlane3.subdivisionsWidth" 50;
     setAttr "polyPlane3.subdivisionsHeight" 50;
     select -r pPlane1;
+    setAttr "lambert1.color" -type double3 1 1 1 ;
+    
+//create the boundary box
+    polyPlane -ch on -o on -w 10 -h 34 -sw 1 -sh 1 -cuv 2 ;
+    setAttr "pPlane4.rotateZ" -90;
+    move -r 5 -3 0;
+    polyPlane -ch on -o on -w 10 -h 34 -sw 1 -sh 1 -cuv 2 ;
+    setAttr "pPlane5.rotateZ" -90;
+    move -r -5 -3 0;
+    polyPlane -ch on -o on -w 10 -h 10 -sw 1 -sh 1 -cuv 2 ;
+    rotate -r -os -90 0 90 ;
+    move -r 0 -3 17;
+    polyPlane -ch on -o on -w 10 -h 10 -sw 1 -sh 1 -cuv 2 ;
+    rotate -r -os -90 0 90 ;
+    move -r 0 -3 -17;
+    polyPlane -ch on -o on -w 10 -h 34 -sw 1 -sh 1 -cuv 2 ;
+    move -r 0 -8 0;
+    
 
-//attach a deformer to each plane
+//attach a deformer to each speaker
+    SelectTool;
+    select -r pPlane1;
     SoftModTool;
     move -r -os -wd 0 2 0 ;
     SelectTool;
@@ -47,6 +84,16 @@ global proc speakerScene(string $filename, int $bass, int $mid, int $treble, flo
     select -r pPlane2 ;
     rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
     select -r pPlane3 ;
+    rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
+    select -r pPlane4 ;
+    rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
+    select -r pPlane5 ;
+    rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
+    select -r pPlane6 ;
+    rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
+    select -r pPlane7 ;
+    rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
+    select -r pPlane8 ;
     rigidBody -passive -m 1 -dp 0 -sf 0.2 -df 0.2 -b 0.6 -l 0 -tf 200 -iv 0 0 0 -iav 0 0 0 -c 0 -pc 0 -i 0 0 0 -imp 0 0 0 -si 0 0 0 -sio none ;
 
 //create gravity
@@ -73,6 +120,11 @@ global proc speakerScene(string $filename, int $bass, int $mid, int $treble, flo
     collision -r 1 -f 0 -o 0.01  pPlane1;
     collision -r 1 -f 0 -o 0.01  pPlane2;
     collision -r 1 -f 0 -o 0.01  pPlane3;
+    collision -r 1 -f 0 -o 0.01  pPlane4;
+    collision -r 1 -f 0 -o 0.01  pPlane5;
+    collision -r 1 -f 0 -o 0.01  pPlane6;
+    collision -r 1 -f 0 -o 0.01  pPlane7;
+    collision -r 1 -f 0 -o 0.01  pPlane8;
     connectDynamic -c pPlane1  particle1;
     connectDynamic -c pPlane1  particle2;
     connectDynamic -c pPlane1  particle3;
@@ -82,6 +134,22 @@ global proc speakerScene(string $filename, int $bass, int $mid, int $treble, flo
     connectDynamic -c pPlane3  particle1;
     connectDynamic -c pPlane3  particle2;
     connectDynamic -c pPlane3  particle3;
+    connectDynamic -c pPlane4  particle1;
+    connectDynamic -c pPlane4  particle2;
+    connectDynamic -c pPlane4  particle3;
+    connectDynamic -c pPlane5  particle1;
+    connectDynamic -c pPlane5  particle2;
+    connectDynamic -c pPlane5  particle3;
+    connectDynamic -c pPlane6  particle1;
+    connectDynamic -c pPlane6  particle2;
+    connectDynamic -c pPlane6  particle3;
+    connectDynamic -c pPlane7  particle1;
+    connectDynamic -c pPlane7  particle2;
+    connectDynamic -c pPlane7  particle3;
+    connectDynamic -c pPlane8  particle1;
+    connectDynamic -c pPlane8  particle2;
+    connectDynamic -c pPlane8  particle3;
+    
 
 //set attributes of particles
     setAttr "particleShape1.lifespanMode" 1;
@@ -101,9 +169,9 @@ global proc speakerScene(string $filename, int $bass, int $mid, int $treble, flo
     addAttr -ln "rgbPP0" -dt vectorArray particleShape3;
 
 //note the inheritColor is commented out for MAC because there is an inherent error within Maya.  Set to 1 so that particles may start colored
-//    setAttr "emitter1.inheritColor" 1;
-//    setAttr "emitter2.inheritColor" 1;
-//    setAttr "emitter3.inheritColor" 1;
+    setAttr "emitter1.inheritColor" 1;
+    setAttr "emitter2.inheritColor" 1;
+    setAttr "emitter3.inheritColor" 1;
     setAttr "rigidBody1.bounciness" 0.05;
     setAttr "rigidBody2.bounciness" 0.05;
     setAttr "rigidBody3.bounciness" 0.05;
@@ -119,17 +187,51 @@ global proc speakerScene(string $filename, int $bass, int $mid, int $treble, flo
 	expression -string ("softMod3Handle.translateY = rmsBand(\""+$audioNodeName+"\","+$mid+","+$treble+")*"+0.25);
 
 //changes colors of the emitted spheres
-	expression -string ("emitter1.particleColorR = expression1.output[0]*"+$left[0]);
-	expression -string ("emitter1.particleColorB = expression1.output[0]*"+$left[1]);
-	expression -string ("emitter1.particleColorG = expression1.output[0]*"+$left[2]);
-	
-	float $middle[] = {($left[0]+$right[0])/2, ($left[1]+$right[1])/2, ($left[2]+$right[2])/2};
-	
-	expression -string ("emitter2.particleColorR = expression2.output[0]*"+$middle[0]);
-	expression -string ("emitter2.particleColorB = expression2.output[0]*"+$middle[1]);
-	expression -string ("emitter2.particleColorG = expression2.output[0]*"+$middle[2]);
-	
-	expression -string ("emitter3.particleColorR = expression3.output[0]*"+$right[0]);
-	expression -string ("emitter3.particleColorB = expression3.output[0]*"+$right[1]);
-	expression -string ("emitter3.particleColorG = expression3.output[0]*"+$right[2]);
+    float $interprgb1[];
+    float $interphsv1[];
+    float $interprgb2[];
+    float $interphsv2[];
+    float $interprgb3[];
+    float $interphsv3[];
+    if ($interpolation==1) {
+		float $lefthsv[] = RGBtoHSV($left);
+		float $righthsv[] = RGBtoHSV($right);
+		$interphsv1 = interphsv($lefthsv, $righthsv, 0);
+		$interprgb1 = HSVtoRGB($interphsv1);
+		$interphsv2 = interphsv($lefthsv, $righthsv, 0.5);
+		$interprgb2 = HSVtoRGB($interphsv2);
+		$interphsv3 = interphsv($lefthsv, $righthsv, 1);
+		$interprgb3 = HSVtoRGB($interphsv3);
+	}
+	else if ($interpolation==2){
+	    $interprgb1 = interprgb($left, $right, 0);
+	    $interprgb2 = interprgb($left, $right, 0.5);
+	    $interprgb3 = interprgb($left, $right, 1);
+	}
+    if($color==1){
+        setAttr ("emitter1.particleColorR") ($interprgb1[0]);
+        setAttr ("emitter1.particleColorG") ($interprgb1[1]);
+        setAttr ("emitter1.particleColorB") ($interprgb1[2]);
+        
+        setAttr ("emitter2.particleColorR") ($interprgb2[0]);
+        setAttr ("emitter2.particleColorG") ($interprgb2[1]);
+        setAttr ("emitter2.particleColorB") ($interprgb2[2]);
+        
+        setAttr ("emitter3.particleColorR") ($interprgb3[0]);        
+        setAttr ("emitter3.particleColorG") ($interprgb3[1]);
+        setAttr ("emitter3.particleColorB") ($interprgb3[2]);
+    }
+    else{
+    	expression -string ("emitter1.particleColorR = expression1.output[0]*"+$interprgb1[0]);
+    	expression -string ("emitter1.particleColorB = expression1.output[0]*"+$interprgb1[1]);
+    	expression -string ("emitter1.particleColorG = expression1.output[0]*"+$interprgb1[2]);
+    	
+    	expression -string ("emitter2.particleColorR = expression2.output[0]*"+$interprgb2[0]);
+    	expression -string ("emitter2.particleColorB = expression2.output[0]*"+$interprgb2[1]);
+    	expression -string ("emitter2.particleColorG = expression2.output[0]*"+$interprgb2[2]);
+    	
+    	expression -string ("emitter3.particleColorR = expression3.output[0]*"+$interprgb3[0]);
+    	expression -string ("emitter3.particleColorB = expression3.output[0]*"+$interprgb3[1]);
+    	expression -string ("emitter3.particleColorG = expression3.output[0]*"+$interprgb3[2]);
+	}
 };
